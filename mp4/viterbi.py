@@ -42,7 +42,7 @@ def update_dict(train):
 
     for line in train:
         my_val4 = my_val4 + 1
-        last_tag = '<s>'
+        last_tag = 'f to pay respects'
 
         for (word, tag) in line:
             myval3.append(tag)
@@ -159,7 +159,7 @@ def viterbi_p1(train, test):
                 tag = myval3[j]
 
                 if i == 0:
-                    changeChance = (math.log(myval1['<s>'][tag] + laplace_smoothing)- math.log(my_val4 + (laplace_smoothing * myLength)))
+                    changeChance = (math.log(myval1['f to pay respects'][tag] + laplace_smoothing)- math.log(my_val4 + (laplace_smoothing * myLength)))
                 else:
                     upperCoord = (0, 0)
                     upperBound = math.inf * (-1) 
