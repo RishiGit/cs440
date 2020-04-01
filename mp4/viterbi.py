@@ -55,6 +55,9 @@ def update_dict(train):
 
     return list(set(myval3)), my_val4, myval1, myval2, list(set(final_return))
 
+def element(x):
+    return x[1]
+
 '''<--------------------------- HELPER FUCNTIONS ABOVE ------------------------------> '''
 
 def baseline(train, test):
@@ -98,10 +101,11 @@ def baseline(train, test):
     for myval2 in myTag:
         myRank.append((myval2, myTag.get(myval2)))
 
-    for words in dictionary:
-        dictionary.get(words).sort(key=lambda x:x[1])
+    myRank.sort(key=element)
 
-    myRank.sort(key=lambda x:x[1])
+    for words in dictionary:
+        dictionary.get(words).sort(key=element)
+
     for myWord in test:
 
         holder = []
@@ -122,6 +126,69 @@ def baseline(train, test):
 def viterbi_p1(train, test):
     '''
     TODO: implement the simple Viterbi algorithm. This function has time out limitation for 3 mins.
+    input:  training data (list of sentences, with myval2 on the words)
+            E.g. [[(word1, tag1), (word2, tag2)], [(word3, tag3), (word4, tag4)]]
+            test data (list of sentences, no myval2 on the words)
+            E.g [[word1,word2...]]
+    output: list of sentences with myval2 on the words
+            E.g. [[(word1, tag1), (word2, tag2)...], [(word1, tag1), (word2, tag2)...]...]
+    '''
+    final_return = []
+    laplace_smoothing = 0.1
+    myval3, my_val4, myval1, myval2, lang = update_dict(train)
+    langLength = len(lang)
+    myLength = len(myval3)
+    myval3.sort()
+
+    for line in test:
+
+        if len(line) == 0:
+            final_return.append([])
+            continue
+
+        myPercent = [[0 for col in range(myLength)]
+                    for row in range(len(line))]
+        myDistant = [[(0, 0) for col in range(myLength)]
+                    for row in range(len(line))]
+
+        for i in range(0, len(line)):
+
+            word = line[i].lower()
+
+            for j in range(0, myLength):
+                tag = myval3[j]
+
+                if i == 0:
+                    changeChance = (math.log(myval1['<s>'][tag] + laplace_smoothing)- math.log(my_val4 + (laplace_smoothing * myLength)))
+                else:
+                    upperCoord = (0, 0)
+                    upperBound = math.inf * (-1) 
+
+                    for k in range(0, myLength):
+                        last_tag = myval3[k]
+                        lastChance = myPercent[i-1][k]
+                        upperTransition = (math.log(myval1[last_tag][tag] + laplace_smoothing) - math.log(myval1[last_tag]['total'] + (k*myLength)))
+                        upperTransition += lastChance
+
+                        if upperBound < upperTransition:
+                            upperCoord = (i-1, k)
+                            upperBound = upperTransition
+
+                    myDistant[i][j] = upperCoord
+                    changeChance = upperBound
+
+                percentChance = (math.log(myval2[word][tag] + laplace_smoothing) -math.log(myval1[tag]['total'] + (laplace_smoothing*(langLength+1))))
+                myPercent[i][j] = changeChance + percentChance
+
+        answer = analyze(myval3, line, myPercent, myDistant)
+        final_return.append(answer)
+
+    return final_return
+
+
+def viterbi_p2(train, test):
+    '''
+    TODO: implement the optimized Viterbi algorithm. This function has time out limitation for 3 mins.
     input:  training data (list of sentences, with myval2 on the words)
             E.g. [[(word1, tag1), (word2, tag2)], [(word3, tag3), (word4, tag4)]]
             test data (list of sentences, no myval2 on the words)
@@ -160,10 +227,11 @@ def viterbi_p1(train, test):
     for myval2 in myTag:
         myRank.append((myval2, myTag.get(myval2)))
 
-    for words in dictionary:
-        dictionary.get(words).sort(key=lambda x:x[1])
+    myRank.sort(key=element)
 
-    myRank.sort(key=lambda x:x[1])
+    for words in dictionary:
+        dictionary.get(words).sort(key=element)
+
     for myWord in test:
 
         holder = []
@@ -180,108 +248,6 @@ def viterbi_p1(train, test):
         final_return.append(holder)
 
     return final_return
-
-
-def viterbi_p2(train, test):
-    '''
-    TODO: implement the optimized Viterbi algorithm. This function has time out limitation for 3 mins.
-    input:  training data (list of sentences, with myval2 on the words)
-            E.g. [[(word1, tag1), (word2, tag2)], [(word3, tag3), (word4, tag4)]]
-            test data (list of sentences, no myval2 on the words)
-            E.g [[word1,word2...]]
-    output: list of sentences with myval2 on the words
-            E.g. [[(word1, tag1), (word2, tag2)...], [(word1, tag1), (word2, tag2)...]...]
-    '''
-    final_return = []
-    firstChance = Counter()
-    changeChance = Counter()
-    startChance = Counter()
-    myval1 = Counter()
-    myval2 = Counter()
-    myval3 = Counter()
-    myval4 = Counter()
-    myval5 = Counter()
-    myval6 = Counter()
-    first_holder = []
-
-    for line in train:
-        tag_at_start = line[0][1]
-        myval3[tag_at_start] += 1
-
-        for const in range(len(line)):
-            curr_myval2 = line[const]
-            word = curr_myval2[0]
-            tag = curr_myval2[1]
-
-            if const + 1 < len(line) - 1:
-                next2 = line[const + 1]
-                tagger = next2[1]
-                myval4[(tag, tagger)] += 1
-
-            myval6[word] += 1
-            myval5[tag] += 1
-            myval2[(word, tag)] += 1
-
-    k = 0.000001
-
-    for tag in myval5:
-        for last_tag in myval5:
-            changeChance[(tag, last_tag)] = math.log((myval4[(last_tag, tag)] + k) / (myval5[last_tag] + k * len(myval5)))
-
-        startChance[tag] = math.log((myval3[tag] + k) / (k * len(myval5) + sum(myval3.values())))
-
-    for word in myval6:
-        if myval6[word] == 1:
-            first_holder.append(word)
-
-    for tag in myval5:
-        for word in first_holder:
-            myval1[tag] += myval2[(word, tag)]
-
-        firstChance[tag] = (myval1[tag] + k) / (k * len(myval5) + len(first_holder))
-        
-    for line in test:
-        final_ans = []
-        way = []
-        analyze = {}
-        algo = {}
-        upperBound = Counter()
-        T = len(line) - 1
-
-        for tag in myval5: 
-            analyze[(tag, 0)] = 0                               
-            determinant = k * firstChance[tag]   
-            algo[(tag, 0)] = math.log((myval2[(line[0], tag)] + determinant) / (myval5[tag] + determinant * len(myval6))) + startChance[tag]
-
-        for val in range(len(line)):
-            if val == 0:
-                continue
-
-            for tag in myval5:
-                highChance = {}
-                determinant = k * firstChance[tag]   
-
-                for last_tag in myval5:                                                                            
-                    highChance[last_tag] = math.log((myval2[(line[val], tag)] + determinant) / (myval5[tag] + determinant * len(myval6))) + changeChance[(tag, last_tag)] + algo[(last_tag, val-1)] 
-
-                analyze[(tag, val)] = (max(highChance, key = highChance.get), val-1)
-                algo[(tag, val)] = max(highChance.values())
-
-        for tag in myval5:
-            upperBound[(tag, T)] = algo[(tag, T)]
-        daWay = max(upperBound, key = upperBound.get)
-
-        while daWay != 0:
-            way.append(daWay[0])
-            daWay = analyze[daWay]
-        way.reverse()
-
-        for const in range(len(line)):
-            final_ans.append((line[const], way[const]))
-
-        final_return.append(final_ans)
-    return final_return
-
 
 
 
